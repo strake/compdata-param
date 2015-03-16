@@ -82,4 +82,4 @@ makeHDifunctor fname = do
                           if containsType tp (VarT conArg) then
                               [| hdimap $f $g |]
                           else
-                              [| fmap $g |]
+                              [| hfmap $g |]

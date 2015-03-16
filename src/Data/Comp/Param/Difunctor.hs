@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, OverlappingInstances #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Comp.Param.Difunctor
