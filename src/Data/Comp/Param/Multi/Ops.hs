@@ -19,7 +19,7 @@ module Data.Comp.Param.Multi.Ops where
 import Data.Comp.Param.Multi.HDifunctor
 import Data.Comp.Param.Multi.HDitraversable
 import qualified Data.Comp.Ops as O
-import Control.Monad (liftM)
+import Control.Monad (fmap)
 
 
 -- Sums
@@ -41,8 +41,8 @@ instance (HDifunctor f, HDifunctor g) => HDifunctor (f :+: g) where
     hdimap f g (Inr e) = Inr (hdimap f g e)
 
 instance (HDitraversable f, HDitraversable g) => HDitraversable (f :+: g) where
-    hdimapM f (Inl e) = Inl `liftM` hdimapM f e
-    hdimapM f (Inr e) = Inr `liftM` hdimapM f e
+    hdimapM f (Inl e) = Inl <$> hdimapM f e
+    hdimapM f (Inr e) = Inr <$> hdimapM f e
 
 -- | Signature containment relation for automatic injections. The left-hand must
 -- be an atomic signature, where as the right-hand side must have a list-like
@@ -91,7 +91,7 @@ instance HDifunctor f => HDifunctor (f :&: p) where
     hdimap f g (v :&: c) = hdimap f g v :&: c
 
 instance HDitraversable f => HDitraversable (f :&: p) where
-    hdimapM f (v :&: c) = liftM (:&: c) (hdimapM f v)
+    hdimapM f (v :&: c) = fmap (:&: c) (hdimapM f v)
 
 {-| This class defines how to distribute an annotation over a sum of
   signatures. -}

@@ -23,6 +23,7 @@ import Data.Comp.Param.Ditraversable
 import Data.Traversable (mapM)
 import Language.Haskell.TH
 import Data.Maybe
+import Control.Applicative
 import Control.Monad hiding (mapM)
 import Prelude hiding (mapM)
 
@@ -47,6 +48,7 @@ makeDitraversable fname = do
       classType = foldl1 AppT [ConT ''Ditraversable, complType]
   normConstrs <- mapM normalConExp constrs
   constrs' <- mapM (mkPatAndVars . isFarg fArg funTy) normConstrs
+  traverseDecl <- funD 'ditraverse (map traverseClause constrs')
   mapMDecl <- funD 'dimapM (map mapMClause constrs')
   sequenceDecl <- funD 'disequence (map sequenceClause constrs')
   return [InstanceD [] classType [mapMDecl,sequenceDecl]]
@@ -64,7 +66,16 @@ makeDitraversable fname = do
                    return (conE constr, mkCPat constr varNs,
                            any (not . null . fst) args || any (not . null . snd) args, map varE varNs,
                            catMaybes $ filterVars args varNs (\x y -> Just (False,x,y)) (\x y -> Just (True, x, y)) (const Nothing))
-
+            traverseClause (con, pat,_hasFargs,allVars, []) = flip (Clause [WildP, pat]) [] . NormalB <$> appE [|pure|] (foldl appE con allVars)
+            traverseClause (con, pat,_hasFargs,allVars, fvars) =
+                do fn <- newName "f"
+                   let f = varE fn
+                       addDi False x = x
+                       addDi True  _ = [|ditraverse $(f)|]
+                   body <- snd $ foldl
+                                 (\ (c,y) (fun,d,v) -> ('(<*>), infixApp y (varE c) $ appE (iter d [|traverse|] (addDi fun f)) (varE v)))
+                                 ('(<$>), lamE ((\ (_,_,v) -> varP v) <$> fvars) $ foldl appE con allVars) fvars
+                   pure $ Clause [if _hasFargs then VarP fn else WildP, pat] (NormalB body) []
             -- Note: the monadic versions are not defined
             -- applicatively, as this results in a considerable
             -- performance penalty (by factor 2)!
@@ -76,12 +87,12 @@ makeDitraversable fname = do
                        addDi False x = x
                        addDi True _ = [|dimapM $(f)|]
                        conBind (fun,d,x) y = [| $(iter d [|mapM|] (addDi fun f)) $(varE x)  >>= $(lamE [varP x] y)|]
-                   body <- foldr conBind [|return $conAp|] fvars
+                   body <- foldr conBind [|pure $conAp|] fvars
                    return $ Clause [fp, pat] (NormalB body) []
             sequenceClause (con, pat,_hasFargs,allVars, fvars) =
                 do let conAp = foldl appE con allVars
                        varE' False _ x = varE x
                        varE' True d x = appE (iter d [|fmap|] [|disequence|]) (varE x)
                        conBind (fun,d, x) y = [| $(iter' d [|sequence|] (varE' fun d x))  >>= $(lamE [varP x] y)|]
-                   body <- foldr conBind [|return $conAp|] fvars
+                   body <- foldr conBind [|pure $conAp|] fvars
                    return $ Clause [pat] (NormalB body) []

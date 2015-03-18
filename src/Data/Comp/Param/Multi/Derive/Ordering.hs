@@ -24,7 +24,7 @@ import Data.Comp.Derive.Utils
 import Data.Maybe
 import Data.List
 import Language.Haskell.TH hiding (Cxt)
-import Control.Monad (liftM)
+import Control.Monad (fmap)
 
 compList :: [Ordering] -> Ordering
 compList = fromMaybe EQ . find (/= EQ)
@@ -66,12 +66,12 @@ makeOrdHD fname = do
               return $ Clause [patX, patY] (NormalB body) []
             eqDBody :: Name -> Name -> [(Name, Name, Type)] -> ExpQ
             eqDBody conArg coArg x =
-                [|liftM compList (sequence $(listE $ map (eqDB conArg coArg) x))|]
+                [|fmap compList (sequence $(listE $ map (eqDB conArg coArg) x))|]
             eqDB :: Name -> Name -> (Name, Name, Type) -> ExpQ
             eqDB conArg coArg (x, y, tp)
                 | not (containsType tp (VarT conArg)) &&
                   not (containsType tp (VarT coArg)) =
-                    [| return $ compare $(varE x) $(varE y) |]
+                    [| pure $ compare $(varE x) $(varE y) |]
                 | otherwise =
                     case tp of
                       AppT (VarT a) _ 
@@ -88,6 +88,6 @@ makeOrdHD fname = do
                           else
                               [| pcompare $(varE x) $(varE y) |]
             genLtClause (c, _) (d, _) =
-                clause [recP c [], recP d []] (normalB [| return LT |]) []
+                clause [recP c [], recP d []] (normalB [| pure LT |]) []
             genGtClause (c, _) (d, _) =
-                clause [recP c [], recP d []] (normalB [| return GT |]) []
+                clause [recP c [], recP d []] (normalB [| pure GT |]) []

@@ -41,7 +41,7 @@ makeEqHD fname = do
   let defC = if length constrs < 2 then
                  []
              else
-                 [clause [wildP,wildP] (normalB [|return False|]) []]
+                 [clause [wildP,wildP] (normalB [|pure False|]) []]
   eqHDDecl <- funD 'eqHD (map (eqHDClause conArg coArg) constrs' ++ defC)
   let context = map (\arg -> mkClassP ''Eq [arg]) argNames
   return [InstanceD context classType [eqHDDecl]]
@@ -56,12 +56,12 @@ makeEqHD fname = do
               return $ Clause [patx,paty] (NormalB body) []
             eqHDBody :: Name -> Name -> [(Name, Name, Type)] -> ExpQ
             eqHDBody conArg coArg x =
-                [|liftM and (sequence $(listE $ map (eqHDB conArg coArg) x))|]
+                [|fmap and (sequence $(listE $ map (eqHDB conArg coArg) x))|]
             eqHDB :: Name -> Name -> (Name, Name, Type) -> ExpQ
             eqHDB conArg coArg (x, y, tp)
                 | not (containsType tp (VarT conArg)) &&
                   not (containsType tp (VarT coArg)) =
-                    [| return $ $(varE x) == $(varE y) |]
+                    [| pure $ $(varE x) == $(varE y) |]
                 | otherwise =
                     case tp of
                       AppT (VarT a) _ 

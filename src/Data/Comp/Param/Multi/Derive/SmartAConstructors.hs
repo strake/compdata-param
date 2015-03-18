@@ -33,7 +33,7 @@ smartAConstructors :: Name -> Q [Dec]
 smartAConstructors fname = do
     TyConI (DataD _cxt _tname _targs constrs _deriving) <- abstractNewtypeQ $ reify fname
     let cons = map abstractConType constrs
-    liftM concat $ mapM genSmartConstr cons
+    fmap concat $ mapM genSmartConstr cons
         where genSmartConstr (name, args) = do
                 let bname = nameBase name
                 genSmartConstr' (mkName $ "iA" ++ bname) name args

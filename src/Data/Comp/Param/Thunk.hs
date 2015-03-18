@@ -65,7 +65,7 @@ whnf (In (Inr t)) = return $ Right t
 whnf (Var x) = return $ Left x
 
 whnf' :: Monad m => TrmT m f a -> m (TrmT m f a)
-whnf' =  liftM (either Var inject) . whnf
+whnf' =  fmap (either Var inject) . whnf
 
 -- | This function first evaluates the argument term into whnf via
 -- 'whnf' and then projects the top-level signature to the desired
@@ -87,7 +87,7 @@ nfT t = termM $ nf $ unTerm  t
 
 -- | This function evaluates all thunks.
 nf :: (Monad m, Ditraversable f) => TrmT m f a -> m (Trm f a)
-nf = either (return . Var) (liftM In . dimapM nf) <=< whnf
+nf = either (pure . Var) (fmap In . dimapM nf) <=< whnf
 
 -- | This function evaluates all thunks while simultaneously
 -- projecting the term to a smaller signature. Failure to do the
@@ -99,14 +99,14 @@ nfTPr t = termM $ nfPr $ unTerm t
 -- projecting the term to a smaller signature. Failure to do the
 -- projection is signalled as a failure in the monad as in 'whnfPr'.
 nfPr :: (Monad m, Ditraversable g, g :<: f) => TrmT m f a -> m (Trm g a)
-nfPr = liftM In . dimapM nfPr <=< whnfPr
+nfPr = fmap In . dimapM nfPr <=< whnfPr
 
 
 evalStrict :: (Ditraversable g, Monad m, g :<: f) => 
               (g (TrmT m f a) (f a (TrmT m f a)) -> TrmT m f a)
            -> g (TrmT m f a) (TrmT m f a) -> TrmT m f a
 evalStrict cont t = thunk $ do 
-                      t' <- dimapM (liftM (either (const Nothing) Just) . whnf) t
+                      t' <- dimapM (fmap (either (const Nothing) Just) . whnf) t
                       case disequence t' of
                         Nothing -> return $ inject' t
                         Just s -> return $ cont s
@@ -119,7 +119,7 @@ type AlgT m f g = Alg f (TermT m g)
 -- | This combinator makes the evaluation of the given functor
 -- application strict by evaluating all thunks of immediate subterms.
 strict :: (f :<: g, Ditraversable f, Monad m) => f a (TrmT m g a) -> TrmT m g a
-strict x = thunk $ liftM inject $ dimapM whnf' x
+strict x = thunk $ fmap inject $ dimapM whnf' x
 
 -- | This combinator makes the evaluation of the given functor
 -- application strict by evaluating all thunks of immediate subterms.

@@ -20,7 +20,7 @@ module Data.Comp.Param.Derive.Projections
     ) where
 
 import Language.Haskell.TH hiding (Cxt)
-import Control.Monad (liftM)
+import Control.Monad (fmap)
 import Data.Comp.Param.Ditraversable (Ditraversable)
 import Data.Comp.Param.Term
 import Data.Comp.Param.Algebra (appTSigFunM')
@@ -47,7 +47,7 @@ projn n = do
             forallT (map PlainTV $ fvar : avar : bvar : gvars)
                     (sequence cxt) tp'
           genDecl x [g] a b =
-            [| liftM inj (proj $(varE x)
+            [| fmap inj (proj $(varE x)
                           :: Maybe ($(varT g `appT` varT a `appT` varT b))) |]
           genDecl x (g:gs) a b =
             [| case (proj $(varE x)

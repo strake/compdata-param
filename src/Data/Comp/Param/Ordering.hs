@@ -28,7 +28,7 @@ import Data.Comp.Param.FreshM
 import Data.Comp.Param.Equality
 import Data.Maybe (fromMaybe)
 import Data.List (find)
-import Control.Monad (liftM)
+import Control.Monad (fmap)
 
 -- |Ordering of parametric values.
 class PEq a => POrd a where
@@ -36,9 +36,9 @@ class PEq a => POrd a where
 
 instance POrd a => POrd [a] where
     pcompare l1 l2
-        | length l1 < length l2 = return LT
-        | length l1 > length l2 = return GT
-        | otherwise = liftM compList $ mapM (uncurry pcompare) $ zip l1 l2
+        | length l1 < length l2 = pure LT
+        | length l1 > length l2 = pure GT
+        | otherwise = fmap compList $ mapM (uncurry pcompare) $ zip l1 l2
 
 compList :: [Ordering] -> Ordering
 compList = fromMaybe EQ . find (/= EQ)

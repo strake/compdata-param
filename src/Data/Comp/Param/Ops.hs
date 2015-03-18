@@ -17,7 +17,7 @@ module Data.Comp.Param.Ops where
 
 import Data.Comp.Param.Difunctor
 import Data.Comp.Param.Ditraversable
-import Control.Monad (liftM)
+import Control.Monad (fmap)
 
 
 -- Sums
@@ -39,10 +39,14 @@ instance (Difunctor f, Difunctor g) => Difunctor (f :+: g) where
     dimap f g (Inr e) = Inr (dimap f g e)
 
 instance (Ditraversable f, Ditraversable g) => Ditraversable (f :+: g) where
-    dimapM f (Inl e) = Inl `liftM` dimapM f e
-    dimapM f (Inr e) = Inr `liftM` dimapM f e
-    disequence (Inl e) = Inl `liftM` disequence e
-    disequence (Inr e) = Inr `liftM` disequence e
+    ditraverse f (Inl e) = Inl <$> ditraverse f e
+    ditraverse f (Inr e) = Inr <$> ditraverse f e
+    disequenceA (Inl e) = Inl <$> disequenceA e
+    disequenceA (Inr e) = Inr <$> disequenceA e
+    dimapM f (Inl e) = Inl <$> dimapM f e
+    dimapM f (Inr e) = Inr <$> dimapM f e
+    disequence (Inl e) = Inl <$> disequence e
+    disequence (Inr e) = Inr <$> disequence e
 
 -- | Signature containment relation for automatic injections. The left-hand must
 -- be an atomic signature, where as the right-hand side must have a list-like
@@ -91,8 +95,10 @@ instance Difunctor f => Difunctor (f :&: p) where
     dimap f g (v :&: c) = dimap f g v :&: c
 
 instance Ditraversable f => Ditraversable (f :&: p) where
-    dimapM f (v :&: c) = liftM (:&: c) (dimapM f v)
-    disequence (v :&: c) = liftM (:&: c) (disequence v)
+    ditraverse f (v :&: c) = fmap (:&: c) (ditraverse f v)
+    disequenceA (v :&: c) = fmap (:&: c) (disequenceA v)
+    dimapM f (v :&: c) = fmap (:&: c) (dimapM f v)
+    disequence (v :&: c) = fmap (:&: c) (disequence v)
 
 {-| This class defines how to distribute an annotation over a sum of
   signatures. -}

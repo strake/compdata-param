@@ -33,7 +33,7 @@ smartConstructors fname = do
     TyConI (DataD _cxt tname targs constrs _deriving) <- abstractNewtypeQ $ reify fname
     let iVar = tyVarBndrName $ last targs
     let cons = map (abstractConType &&& iTp iVar) constrs
-    liftM concat $ mapM (genSmartConstr (map tyVarBndrName targs) tname) cons
+    fmap concat $ mapM (genSmartConstr (map tyVarBndrName targs) tname) cons
         where iTp iVar (ForallC _ cxt _) =
                   -- Check if the GADT phantom type is constrained
                   case [y | Just (x, y) <- map isEqualP cxt, x == VarT iVar] of

@@ -24,7 +24,7 @@ import Data.Comp.Param.Sum
 import Data.Comp.Param.Ops
 import Data.Comp.Param.Difunctor
 import Data.Comp.Param.FreshM
-import Control.Monad (liftM)
+import Control.Monad (fmap)
 
 -- |Equality on parametric values. The equality test is performed inside the
 -- 'FreshM' monad for generating fresh identifiers.
@@ -34,7 +34,7 @@ class PEq a where
 instance PEq a => PEq [a] where
     peq l1 l2
         | length l1 /= length l2 = return False
-        | otherwise = liftM or $ mapM (uncurry peq) $ zip l1 l2
+        | otherwise = fmap or $ mapM (uncurry peq) $ zip l1 l2
 
 instance Eq a => PEq a where
     peq x y = return $ x == y

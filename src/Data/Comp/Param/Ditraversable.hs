@@ -22,7 +22,11 @@ import Data.Comp.Param.Difunctor
 {-| Difunctors representing data structures that can be traversed from left to
   right. -}
 class Difunctor f => Ditraversable f where
+    ditraverse :: Applicative p => (b -> p c) -> f a b -> p (f a c)
+    ditraverse f = disequenceA . fmap f
+    disequenceA :: Applicative p => f a (p b) -> p (f a b)
+    disequenceA = ditraverse id
     dimapM :: Monad m => (b -> m c) -> f a b -> m (f a c)
-    dimapM f = disequence . fmap f
+    dimapM = ditraverse
     disequence :: Monad m => f a (m b) -> m (f a b)
     disequence = dimapM id

@@ -47,7 +47,7 @@ makeEqD fname = do
   let defC = if length constrs < 2 then
                  []
              else
-                 [clause [wildP,wildP] (normalB [|return False|]) []]
+                 [clause [wildP,wildP] (normalB [|pure False|]) []]
   eqDDecl <- funD 'eqD (map (eqDClause conArg coArg) constrs' ++ defC)
   let context = map (\arg -> mkClassP ''Eq [arg]) argNames
   return [InstanceD context classType [eqDDecl]]
@@ -62,12 +62,12 @@ makeEqD fname = do
               return $ Clause [patx,paty] (NormalB body) []
             eqDBody :: Name -> Name -> [(Name, Name, Type)] -> ExpQ
             eqDBody conArg coArg x =
-                [|liftM and (sequence $(listE $ map (eqDB conArg coArg) x))|]
+                [|fmap and (sequence $(listE $ map (eqDB conArg coArg) x))|]
             eqDB :: Name -> Name -> (Name, Name, Type) -> ExpQ
             eqDB conArg coArg (x, y, tp)
                 | not (containsType tp (VarT conArg)) &&
                   not (containsType tp (VarT coArg)) =
-                    [| return $ $(varE x) == $(varE y) |]
+                    [| pure $ $(varE x) == $(varE y) |]
                 | otherwise =
                     case tp of
                       VarT a

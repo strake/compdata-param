@@ -118,7 +118,7 @@ freeM f g = run
     where run :: NatM m (Cxt h f a b) a
           run (In t) = f =<< hdimapM run t
           run (Hole x) = g x
-          run (Var p) = return p
+          run (Var p) = pure p
 
 {-| Construct a monadic catamorphism from the given monadic algebra. -}
 cataM :: forall m f a. (HDitraversable f, Monad m)
@@ -127,7 +127,7 @@ cataM :: forall m f a. (HDitraversable f, Monad m)
 cataM algm (Term t) = run t
     where run :: NatM m (Trm f a) a
           run (In t) = algm =<< hdimapM run t
-          run (Var x) = return x
+          run (Var x) = pure x
 
 {-| This type represents a monadic algebra, but where the covariant argument is
   also a monadic computation. -}
@@ -135,22 +135,22 @@ type AlgM' m f a = NatM m (f a (Compose m a)) a
 
 {-| Construct a monadic catamorphism for contexts over @f@ with holes of type
   @b@, from the given monadic algebra. -}
-freeM' :: forall m h f a b. (HDifunctor f, Monad m)
+freeM' :: forall m h f a b. (HDifunctor f, Applicative m)
           => AlgM' m f a -> NatM m b a -> NatM m (Cxt h f a b) a
 freeM' f g = run
     where run :: NatM m (Cxt h f a b) a
           run (In t) = f $ hfmap (Compose . run) t
           run (Hole x) = g x
-          run (Var p) = return p
+          run (Var p) = pure p
 
 {-| Construct a monadic catamorphism from the given monadic algebra. -}
-cataM' :: forall m f a. (HDifunctor f, Monad m)
+cataM' :: forall m f a. (HDifunctor f, Applicative m)
           => AlgM' m f a -> NatM m (Term f) a
 {-# NOINLINE [1] cataM' #-}
 cataM' algm (Term t) = run t
     where run :: NatM m (Trm f a) a
           run (In t) = algm $ hfmap (Compose . run) t
-          run (Var x) = return x
+          run (Var x) = pure x
 
 {-| This type represents a signature function. -}
 type SigFun f g = forall (a :: * -> *) (b :: * -> *) . f a b :-> g a b
@@ -227,16 +227,16 @@ type HomM m f g = SigFunM m f (Cxt Hole g)
 {-| Lift the given signature function to a monadic signature function. Note that
   term homomorphisms are instances of signature functions. Hence this function
   also applies to term homomorphisms. -}
-sigFunM :: Monad m => SigFun f g -> SigFunM m f g
-sigFunM f = return . f
+sigFunM :: Applicative m => SigFun f g -> SigFunM m f g
+sigFunM f = pure . f
 
 {-| Lift the give monadic signature function to a monadic term homomorphism. -}
-hom' :: (HDifunctor f, HDifunctor g, Monad m)
+hom' :: (HDifunctor f, HDifunctor g, Applicative m)
             => SigFunM m f g -> HomM m f g
-hom' f = liftM  (In . hfmap Hole) . f
+hom' f = fmap  (In . hfmap Hole) . f
 
 {-| Lift the given signature function to a monadic term homomorphism. -}
-homM :: (HDifunctor g, Monad m) => SigFun f g -> HomM m f g
+homM :: (HDifunctor g, Applicative m) => SigFun f g -> HomM m f g
 homM f = sigFunM $ hom f
 
 {-| Apply a monadic term homomorphism recursively to a term/context. -}
@@ -245,9 +245,9 @@ appHomM :: forall f g m. (HDitraversable f, Monad m, HDifunctor g)
 {-# NOINLINE [1] appHomM #-}
 appHomM f = run
     where run :: CxtFunM m f g
-          run (In t) = liftM appCxt (f =<< hdimapM run t)
-          run (Hole x) = return (Hole x)
-          run (Var p) = return (Var p)
+          run (In t) = fmap appCxt (f =<< hdimapM run t)
+          run (Hole x) = pure (Hole x)
+          run (Var p) = pure (Var p)
 
 {-| A restricted form of |appHomM| which only works for terms. -}
 appTHomM :: (HDitraversable f, Monad m, ParamFunctor m, HDifunctor g)
@@ -261,9 +261,9 @@ appHomM' :: forall f g m. (HDitraversable g, Monad m)
 {-# NOINLINE [1] appHomM' #-}
 appHomM' f = run
     where run :: CxtFunM m f g
-          run (In t) = liftM appCxt (hdimapMCxt run =<<  f t)
-          run (Hole x) = return (Hole x)
-          run (Var p) = return (Var p)
+          run (In t) = fmap appCxt (hdimapMCxt run =<<  f t)
+          run (Hole x) = pure (Hole x)
+          run (Var p) = pure (Var p)
 
 {-| A restricted form of |appHomM'| which only works for terms. -}
 appTHomM' :: (HDitraversable g, Monad m, ParamFunctor m, HDifunctor g)
@@ -275,9 +275,9 @@ appSigFunM :: forall m f g. (HDitraversable f, Monad m)
               => SigFunM m f g -> CxtFunM m f g
 appSigFunM f = run
     where run :: CxtFunM m f g
-          run (In t)   = liftM In (f =<< hdimapM run t)
-          run (Hole x) = return (Hole x)
-          run (Var p)  = return (Var p)
+          run (In t)   = fmap In (f =<< hdimapM run t)
+          run (Hole x) = pure (Hole x)
+          run (Var p)  = pure (Var p)
 
 {-| A restricted form of |appSigFunM| which only works for terms. -}
 appTSigFunM :: (HDitraversable f, Monad m, ParamFunctor m, HDifunctor g)
@@ -290,9 +290,9 @@ appSigFunM' :: forall m f g. (HDitraversable g, Monad m)
                => SigFunM m f g -> CxtFunM m f g
 appSigFunM' f = run
     where run :: CxtFunM m f g
-          run (In t)   = liftM In (hdimapM run =<< f t)
-          run (Hole x) = return (Hole x)
-          run (Var p)  = return (Var p)
+          run (In t)   = fmap In (hdimapM run =<< f t)
+          run (Hole x) = pure (Hole x)
+          run (Var p)  = pure (Var p)
 
 {-| A restricted form of |appSigFunM'| which only works for terms. -}
 appTSigFunM' :: (HDitraversable g, Monad m, ParamFunctor m, HDifunctor g)
@@ -307,12 +307,12 @@ compHomM f g = appHomM f <=< g
 {-| Compose a monadic algebra with a monadic term homomorphism to get a new
   monadic algebra. -}
 compAlgM :: (HDitraversable g, Monad m) => AlgM m g a -> HomM m f g -> AlgM m f a
-compAlgM alg talg = freeM alg return <=< talg
+compAlgM alg talg = freeM alg pure <=< talg
 
 {-| Compose a monadic algebra with a term homomorphism to get a new monadic
   algebra. -}
 compAlgM' :: (HDitraversable g, Monad m) => AlgM m g a -> Hom f g -> AlgM m f a
-compAlgM' alg talg = freeM alg return . talg
+compAlgM' alg talg = freeM alg pure . talg
 
 {-| This function composes two monadic signature functions. -}
 compSigFunM :: Monad m => SigFunM m g h -> SigFunM m f g -> SigFunM m f h

@@ -98,7 +98,7 @@ import Data.Comp.Param.Multi.Derive.Injections
 import Data.Comp.Param.Multi.HDifunctor
 import Data.Comp.Param.Multi.HDitraversable
 
-$(liftM concat $ mapM projn [2..10])
+$(fmap concat $ mapM projn [2..10])
 
 -- |Project the outermost layer of a term to a sub signature. If the signature
 -- @g@ is compound of /n/ atomic signatures, use @project@/n/ instead.
@@ -107,7 +107,7 @@ project (In t)   = proj t
 project (Hole _) = Nothing
 project (Var _)  = Nothing
 
-$(liftM concat $ mapM projectn [2..10])
+$(fmap concat $ mapM projectn [2..10])
 
 -- | Tries to coerce a term/context to a term/context over a sub-signature. If
 -- the signature @g@ is compound of /n/ atomic signatures, use
@@ -116,7 +116,7 @@ deepProject :: (HDitraversable g, g :<: f) => Term f i -> Maybe (Term g i)
 {-# INLINE deepProject #-}
 deepProject = appTSigFunM' proj
 
-$(liftM concat $ mapM deepProjectn [2..10])
+$(fmap concat $ mapM deepProjectn [2..10])
 {-# INLINE deepProject2 #-}
 {-# INLINE deepProject3 #-}
 {-# INLINE deepProject4 #-}
@@ -127,14 +127,14 @@ $(liftM concat $ mapM deepProjectn [2..10])
 {-# INLINE deepProject9 #-}
 {-# INLINE deepProject10 #-}
 
-$(liftM concat $ mapM injn [2..10])
+$(fmap concat $ mapM injn [2..10])
 
 -- |Inject a term where the outermost layer is a sub signature. If the signature
 -- @g@ is compound of /n/ atomic signatures, use @inject@/n/ instead.
 inject :: (g :<: f) => g a (Cxt h f a b) :-> Cxt h f a b
 inject = In . inj
 
-$(liftM concat $ mapM injectn [2..10])
+$(fmap concat $ mapM injectn [2..10])
 
 -- |Inject a term over a sub signature to a term over larger signature. If the
 -- signature @g@ is compound of /n/ atomic signatures, use @deepInject@/n/
@@ -143,7 +143,7 @@ deepInject :: (HDifunctor g, g :<: f) => CxtFun g f
 {-# INLINE deepInject #-}
 deepInject = appSigFun inj
 
-$(liftM concat $ mapM deepInjectn [2..10])
+$(fmap concat $ mapM deepInjectn [2..10])
 {-# INLINE deepInject2 #-}
 {-# INLINE deepInject3 #-}
 {-# INLINE deepInject4 #-}

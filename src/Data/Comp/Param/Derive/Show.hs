@@ -67,14 +67,14 @@ makeShowD fname = do
               return $ Clause [patx] (NormalB body) []
             showDBody :: String -> Name -> Name -> [(Name, Type)] -> ExpQ
             showDBody constr conArg coArg x =
-                [|liftM (unwords . (constr :) .
+                [|fmap (unwords . (constr :) .
                          map (\x -> if elem ' ' x then "(" ++ x ++ ")" else x))
                         (sequence $(listE $ map (showDB conArg coArg) x))|]
             showDB :: Name -> Name -> (Name, Type) -> ExpQ
             showDB conArg coArg (x, tp)
                 | not (containsType tp (VarT conArg)) &&
                   not (containsType tp (VarT coArg)) =
-                    [| return $ show $(varE x) |]
+                    [| pure $ show $(varE x) |]
                 | otherwise =
                     case tp of
                       VarT a
@@ -82,11 +82,11 @@ makeShowD fname = do
                       AppT (AppT ArrowT (VarT a)) _
                           | a == conArg ->
                               [| withName (\v -> do body <- $(varE x) v;
-                                                    return $ "\\" ++ show v ++ " -> " ++ body) |]
+                                                    pure $ "\\" ++ show v ++ " -> " ++ body) |]
                       SigT tp' _ ->
                           showDB conArg coArg (x, tp')
                       _ ->
                           if containsType tp (VarT conArg) then
                               [| showD $(varE x) |]
                           else
-                              [| liftM show $ T.mapM (liftM Dummy) $(varE x) |]
+                              [| fmap show $ T.traverse (fmap Dummy) $(varE x) |]

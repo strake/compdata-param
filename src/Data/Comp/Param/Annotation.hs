@@ -63,9 +63,9 @@ propAnn hom f' = ann p (hom f)
 
 {-| Lift a monadic term homomorphism over signatures @f@ and @g@ to a monadic
   term homomorphism over the same signatures, but extended with annotations. -}
-propAnnM :: (DistAnn f p f', DistAnn g p g', Difunctor g, Monad m) 
+propAnnM :: (DistAnn f p f', DistAnn g p g', Difunctor g, Applicative m) 
          => HomM m f g -> HomM m f' g'
-propAnnM hom f' = liftM (ann p) (hom f)
+propAnnM hom f' = fmap (ann p) (hom f)
     where (f,p) = projectA f'
 
 {-| Annotate each node of a term with a constant value. -}

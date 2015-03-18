@@ -99,7 +99,7 @@ import Data.Comp.Param.Derive.Injections
 import Data.Comp.Param.Difunctor
 import Data.Comp.Param.Ditraversable
 
-$(liftM concat $ mapM projn [2..10])
+$(fmap concat $ mapM projn [2..10])
 
 -- |Project the outermost layer of a term to a sub signature. If the signature
 -- @g@ is compound of /n/ atomic signatures, use @project@/n/ instead.
@@ -108,7 +108,7 @@ project (In t) = proj t
 project (Hole _) = Nothing
 project (Var _) = Nothing
 
-$(liftM concat $ mapM projectn [2..10])
+$(fmap concat $ mapM projectn [2..10])
 
 -- | Tries to coerce a term/context to a term/context over a sub-signature. If
 -- the signature @g@ is compound of /n/ atomic signatures, use
@@ -117,7 +117,7 @@ deepProject :: (Ditraversable g, g :<: f) => Term f -> Maybe (Term g)
 {-# INLINE deepProject #-}
 deepProject = appTSigFunM' proj
 
-$(liftM concat $ mapM deepProjectn [2..10])
+$(fmap concat $ mapM deepProjectn [2..10])
 {-# INLINE deepProject2 #-}
 {-# INLINE deepProject3 #-}
 {-# INLINE deepProject4 #-}
@@ -128,7 +128,7 @@ $(liftM concat $ mapM deepProjectn [2..10])
 {-# INLINE deepProject9 #-}
 {-# INLINE deepProject10 #-}
 
-$(liftM concat $ mapM injn [2..10])
+$(fmap concat $ mapM injn [2..10])
 
 -- |Inject a term where the outermost layer is a sub signature. If the signature
 -- @g@ is compound of /n/ atomic signatures, use @inject@/n/ instead.
@@ -140,7 +140,7 @@ inject = In . inj
 inject' :: (Difunctor g, g :<: f) => g (Cxt h f a b) (Cxt h f a b) -> Cxt h f a b
 inject' = inject . dimap Var id
 
-$(liftM concat $ mapM injectn [2..10])
+$(fmap concat $ mapM injectn [2..10])
 
 -- |Inject a term over a sub signature to a term over larger signature. If the
 -- signature @g@ is compound of /n/ atomic signatures, use @deepInject@/n/
@@ -149,7 +149,7 @@ deepInject :: (Difunctor g, g :<: f) => Term g -> Term f
 {-# INLINE deepInject #-}
 deepInject (Term t) = Term (appSigFun inj t)
 
-$(liftM concat $ mapM deepInjectn [2..10])
+$(fmap concat $ mapM deepInjectn [2..10])
 {-# INLINE deepInject2 #-}
 {-# INLINE deepInject3 #-}
 {-# INLINE deepInject4 #-}

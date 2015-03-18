@@ -62,14 +62,14 @@ makeShowHD fname = do
               return $ Clause [patx] (NormalB body) []
             showHDBody :: String -> Name -> Name -> [(Name, Type)] -> ExpQ
             showHDBody constr conArg coArg x =
-                [|liftM (unwords . (constr :) .
+                [|fmap (unwords . (constr :) .
                          map (\x -> if elem ' ' x then "(" ++ x ++ ")" else x))
                         (sequence $(listE $ map (showHDB conArg coArg) x))|]
             showHDB :: Name -> Name -> (Name, Type) -> ExpQ
             showHDB conArg coArg (x, tp)
                 | not (containsType tp (VarT conArg)) &&
                   not (containsType tp (VarT coArg)) =
-                    [| return $ show $(varE x) |]
+                    [| pure $ show $(varE x) |]
                 | otherwise =
                     case tp of
                       AppT (VarT a) _ 
@@ -77,11 +77,11 @@ makeShowHD fname = do
                       AppT (AppT ArrowT (AppT (VarT a) _)) _
                           | a == conArg ->
                               [| withName (\v -> do body <- (unK . $(varE x)) v
-                                                    return $ "\\" ++ show v ++ " -> " ++ body) |]
+                                                    pure $ "\\" ++ show v ++ " -> " ++ body) |]
                       SigT tp' _ ->
                           showHDB conArg coArg (x, tp')
                       _ ->
                           if containsType tp (VarT conArg) then
                               [| showHD $(varE x) |]
                           else
-                              [| liftM show $ T.mapM (liftM Dummy . unK) $(varE x) |]
+                              [| fmap show $ T.traverse (fmap Dummy . unK) $(varE x) |]
