@@ -32,6 +32,30 @@ module Data.Comp.Param.Multi.Algebra (
       freeM',
       cataM',
 
+      -- * Coalgebras & Anamorphisms
+      Coalg,
+      ana,
+      
+      -- * Monadic Coalgebras & Anamorphisms
+      CoalgM,
+      anaM,
+
+      -- * R-Algebras & Paramorphisms
+      RAlg,
+      para,
+      
+      -- * Monadic R-Algebras & Paramorphisms
+      RAlgM,
+      paraM,
+
+      -- * R-Coalgebras & Apomorphisms
+      RCoalg,
+      apo,
+      
+      -- * Monadic R-Coalgebras & Apomorphisms
+      RCoalgM,
+      apoM,
+
       -- * Term Homomorphisms
       CxtFun,
       SigFun,
@@ -69,9 +93,13 @@ module Data.Comp.Param.Multi.Algebra (
 import Prelude hiding (sequence, mapM)
 import Control.Monad hiding (sequence, mapM)
 import Data.Functor.Compose -- Functor composition
+import Data.Functor.Product
+import Data.Functor.Sum
 import Data.Comp.Param.Multi.Term
 import Data.Comp.Param.Multi.HDifunctor
 import Data.Comp.Param.Multi.HDitraversable
+
+import Unsafe.Coerce
 
 {-| This type represents an algebra over a difunctor @f@ and carrier @a@. -}
 type Alg f a = f a a :-> a
@@ -317,6 +345,91 @@ compAlgM' alg talg = freeM alg pure . talg
 {-| This function composes two monadic signature functions. -}
 compSigFunM :: Monad m => SigFunM m g h -> SigFunM m f g -> SigFunM m f h
 compSigFunM f g a = g a >>= f
+
+
+----------------
+-- Coalgebras --
+----------------
+
+{-| This type represents a coalgebra over a difunctor @f@ and carrier @a@. The
+  list of @(a,b)@s represent the parameters that may occur in the constructed
+  value. The first component represents the seed of the parameter,
+  and the second component is the (polymorphic) parameter itself. If @f@ is
+  itself a binder, then the parameters bound by @f@ can be passed to the
+  covariant argument, thereby making them available to sub terms. -}
+type Coalg f a = forall b i . a i -> Compose [] (Product a b) i -> Sum b (f b (Product a (Compose [] (Product a b)))) i
+
+{-| Construct an anamorphism from the given coalgebra. -}
+ana :: forall f a . HDifunctor f => Coalg f a -> a :-> Term f
+ana f x = Term $ go (Pair x (Compose []))
+    where go :: Product a (Compose [] (Product a b)) :-> Cxt NoHole f b (K ())
+          go (Pair a bs) = case f a bs of
+                             InL p -> Var p
+                             InR t -> In $ hdimap id go t
+
+{-| This type represents a monadic coalgebra over a difunctor @f@ and carrier @a@. -}
+type CoalgM m f a = forall b i . a i -> Compose [] (Product a b) i -> m (Sum b (f b (Product a (Compose [] (Product a b)))) i)
+
+{-| Construct a monadic anamorphism from the given monadic coalgebra. -}
+anaM :: forall a m f . (HDitraversable f, Monad m) => CoalgM m f a -> NatM m a (Term f)
+anaM f x = (\ x -> Term (unsafeCoerce x)) <$> go (Pair x (Compose []))
+    where go :: NatM m (Product a (Compose [] (Product a b))) (Cxt NoHole f b (K ()))
+          go (Pair a bs) = f a bs >>= \ case
+                             InL p -> pure $ Var p
+                             InR t -> In <$> hdimapM go t
+
+
+--------------------------------
+-- R-Algebras & Paramorphisms --
+--------------------------------
+
+{-| This type represents an r-algebra over a difunctor @f@ and carrier @a@. -}
+type RAlg f a = f a (Product (Trm f a) a) :-> a
+
+{-| Construct a paramorphism from the given r-algebra. -}
+para :: forall f a . HDifunctor f => RAlg f a -> Term f :-> a
+para f (Term t) = go t
+    where go :: Trm f a :-> a
+          go (In t)  = f $ hdimap id (\ x -> Pair x (go x)) t
+          go (Var v) = v
+
+{-| This type represents a monadic r-algebra over a difunctor @f@ and carrier @a@. -}
+type RAlgM m f a = NatM m (f a (Product (Trm f a) a)) a
+
+{-| Construct a monadic paramorphism from the given monadic r-algebra. -}
+paraM :: forall m f a . (HDitraversable f, Monad m) => RAlgM m f a -> NatM m (Term f) a
+paraM f (Term t) = go t
+    where go :: NatM m (Trm f a) a
+          go (In t)  = hdimapM (\ x -> Pair x <$> go x) t >>= f
+          go (Var v) = pure v
+
+
+---------------------------------
+-- R-Coalgebras & Apomorphisms --
+---------------------------------
+
+{-| This type represents an r-coalgebra over a difunctor @f@ and carrier @a@. -}
+type RCoalg f a = forall b i . a i -> Compose [] (Product a b) i -> Sum b (f b (Sum (Trm f b) (Product a (Compose [] (Product a b))))) i
+
+{-| Construct an apomorphism from the given r-coalgebra. -}
+apo :: forall f a . HDifunctor f => RCoalg f a -> a :-> Term f
+apo f x = Term $ go (Pair x (Compose []))
+    where go :: Product a (Compose [] (Product a b)) :-> Trm f b
+          go (Pair a bs) = case f a bs of
+                             InL x -> Var x
+                             InR t -> In $ hdimap id (\ case InL t -> t; InR x -> go x;) t
+
+{-| This type represents a monadic r-coalgebra over a functor @f@ and carrier @a@. -}
+type RCoalgM m f a = forall b i . a i -> Compose [] (Product a b) i -> m (Sum b (f b (Sum (Trm f b) (Product a (Compose [] (Product a b))))) i)
+
+{-| Construct a monadic apomorphism from the given monadic r-coalgebra. -}
+apoM :: forall m f a . (HDitraversable f, Monad m) => RCoalgM m f a -> NatM m a (Term f)
+apoM f x = (\ x -> Term (unsafeCoerce x)) <$> go (Pair x (Compose []))
+    where go :: NatM m (Product a (Compose [] (Product a b))) (Trm f b)
+          go (Pair a bs) = f a bs >>= \ case
+                             InL x -> pure $ Var x
+                             InR t -> In <$> hdimapM (\ case InL t -> pure t; InR x -> go x;) t
+
 
 {-
 #ifndef NO_RULES
