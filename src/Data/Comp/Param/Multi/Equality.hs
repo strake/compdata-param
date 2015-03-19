@@ -24,9 +24,12 @@ import Data.Comp.Param.Multi.Sum
 import Data.Comp.Param.Multi.Ops
 import Data.Comp.Param.Multi.HDifunctor
 import Data.Comp.Param.Multi.FreshM
+import Data.Foldable
+import Data.Functor.Compose
 import Data.Functor.Product
 import Data.Functor.Sum
 import Control.Applicative
+import Control.Monad (zipWithM)
 
 -- |Equality on parametric values. The equality test is performed inside the
 -- 'FreshM' monad for generating fresh identifiers.
@@ -39,6 +42,13 @@ instance (PEq a, PEq b) => PEq (Sum a b) where
     peq (InL x) (InL y) = peq x y
     peq (InR x) (InR y) = peq x y
     peq _       _       = pure False
+
+instance (Foldable f, PEq a) => PEq (Compose f a) where
+  peq (Compose xs) (Compose ys)
+    | length xl /= length yl = pure False
+    | otherwise = and <$> zipWithM peq xl yl
+    where xl = toList xs
+          yl = toList ys
 
 instance Eq a => PEq (K a) where
     peq (K x) (K y) = return $ x == y
